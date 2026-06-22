@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Parts Analyser by Naveen</title>
+<meta name="description" content="Enterprise parts inventory analytics — FSN/ABC classification and automated weekly order planning." />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/styles.css" />
+
+<!-- SheetJS for parsing uploaded .xlsx files in-browser (vendored locally for reliability) -->
+<script src="assets/vendor/xlsx.full.min.js"></script>
+<!-- Chart.js for all charts (vendored locally for reliability) -->
+<script src="assets/vendor/chart.umd.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar-scrim" id="sidebarScrim"></div>
+
+  <!-- ============================= SIDEBAR ============================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark">PA</div>
+      <div class="sidebar-brand-text">
+        <div class="sidebar-brand-title">Parts Analyser</div>
+        <div class="sidebar-brand-sub">by Naveen</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav">
+      <div class="nav-section-label">Overview</div>
+      <button class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard
+      </button>
+
+      <div class="nav-section-label">Analysis</div>
+      <button class="nav-item" data-view="fsn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        FSN Analysis
+      </button>
+      <button class="nav-item" data-view="abc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-9"/></svg>
+        ABC Analysis
+      </button>
+      <button class="nav-item" data-view="parts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Part Explorer
+      </button>
+      <button class="nav-item" data-view="ledger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        Ledger Explorer
+      </button>
+
+      <div class="nav-section-label">Analytics</div>
+      <button class="nav-item" data-view="category">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="4" height="10"/><rect x="10" y="6" width="4" height="15"/><rect x="17" y="3" width="4" height="18"/></svg>
+        Category Analytics
+      </button>
+      <button class="nav-item" data-view="trends">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg>
+        Trend Analytics
+      </button>
+
+      <div class="nav-section-label">Planning</div>
+      <button class="nav-item" data-view="orderplanning">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Order Planning
+        <span class="nav-item-badge hidden" id="orderPlanningBadge">0</span>
+      </button>
+      <button class="nav-item" data-view="ai">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+        AI Insights
+      </button>
+
+      <div class="nav-section-label">Data</div>
+      <button class="nav-item" data-view="upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+        Upload Data
+      </button>
+      <button class="nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div><span class="sync-dot offline" id="syncDot"></span><span id="syncStatusText">Not connected</span></div>
+      <div id="lastSyncText">No data loaded yet</div>
+    </div>
+  </aside>
+
+  <!-- ============================= MAIN ============================= -->
+  <div class="main-col">
+
+    <header class="topbar">
+      <div class="flex items-center gap-12" style="min-width:0;">
+        <button class="menu-toggle" id="menuToggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <div class="topbar-title-block">
+          <div class="topbar-title" id="topbarTitle">Dashboard</div>
+          <div class="topbar-subtitle" id="topbarSubtitle">Inventory health at a glance</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-secondary btn-sm" id="refreshBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <span>Refresh</span>
+        </button>
+        <button class="btn btn-primary btn-sm" data-view="upload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+          Upload
+        </button>
+      </div>
+    </header>
+
+    <main class="content-area">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="view active" id="view-dashboard">
+        <div id="dashboardEmptyState"></div>
+        <div id="dashboardContent" class="hidden">
+
+          <div class="setup-banner" id="unpricedNotice" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <div>
+              <div class="setup-banner-title">Some parts have no price on file</div>
+              <div class="setup-banner-text" id="unpricedNoticeText"></div>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center mb-8" style="margin-bottom:14px;">
+            <div></div>
+            <button class="btn btn-secondary btn-sm" id="dashboardExportBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+              Export full inventory
+            </button>
+          </div>
+
+          <div class="grid grid-4" id="kpiCards"></div>
+
+          <div class="grid grid-2 mt-24">
+            <div class="chart-card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Stock value by FSN class</div>
+                  <div class="card-subtitle">Current stock × DLC, grouped by movement speed</div>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap"><canvas id="chartFsnValue"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Consumption value by ABC class</div>
+                  <div class="card-subtitle">All-time qty sold × DLC</div>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap"><canvas id="chartAbcValue"></canvas></div>
+            </div>
+          </div>
+
+          <div class="grid grid-2 mt-24">
+            <div class="chart-card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Daily sales trend — last 90 days</div>
+                  <div class="card-subtitle">Units sold per day (Service Order + Parts Sale Order)</div>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap"><canvas id="chartSalesTrend"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Top 10 parts by consumption value</div>
+                  <div class="card-subtitle">All-time qty sold × DLC</div>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap"><canvas id="chartTopParts"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card mt-24">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Stock-out risk — fast movers with zero stock</div>
+                <div class="card-subtitle">These are losing you sales right now</div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="riskTable"></table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============ FSN ANALYSIS ============ -->
+      <section class="view" id="view-fsn">
+        <div id="fsnEmptyState"></div>
+        <div id="fsnContent" class="hidden">
+          <div class="grid grid-3">
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-label">Fast moving</div>
+                <div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+              </div>
+              <div class="stat-value" id="fsnFastCount">0</div>
+              <div class="text-sm text-muted">parts sold on 6+ days in last 90</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-label">Slow moving</div>
+                <div class="stat-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+              </div>
+              <div class="stat-value" id="fsnSlowCount">0</div>
+              <div class="text-sm text-muted">sold occasionally in last 90 days</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-label">Non-moving</div>
+                <div class="stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg></div>
+              </div>
+              <div class="stat-value" id="fsnNonCount">0</div>
+              <div class="text-sm text-muted">zero sales in last 90 days</div>
+            </div>
+          </div>
+
+          <div class="card mt-24">
+            <div class="card-header">
+              <div>
+                <div class="card-title">FSN classification — all parts</div>
+                <div class="card-subtitle">Window: trailing 90 days from latest ledger date</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="fsnExportBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                Export Excel
+              </button>
+            </div>
+            <div class="filter-bar">
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" class="input" id="fsnSearch" placeholder="Search part number or description" />
+              </div>
+              <select class="select" id="fsnFilterClass">
+                <option value="">All FSN classes</option>
+                <option value="Fast">Fast</option>
+                <option value="Slow">Slow</option>
+                <option value="Non-moving">Non-moving</option>
+              </select>
+              <select class="select" id="fsnFilterCategory"><option value="">All categories</option></select>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="fsnTable"></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ABC ANALYSIS ============ -->
+      <section class="view" id="view-abc">
+        <div id="abcEmptyState"></div>
+        <div id="abcContent" class="hidden">
+          <div class="grid grid-3">
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-label">Class A — top 70% value</div>
+                <div class="stat-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div>
+              </div>
+              <div class="stat-value" id="abcACount">0</div>
+              <div class="text-sm text-muted" id="abcAValue">₹0 consumption value</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-label">Class B — next 20%</div>
+                <div class="stat-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div>
+              </div>
+              <div class="stat-value" id="abcBCount">0</div>
+              <div class="text-sm text-muted" id="abcBValue">₹0 consumption value</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-label">Class C — remaining 10%</div>
+                <div class="stat-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></div>
+              </div>
+              <div class="stat-value" id="abcCCount">0</div>
+              <div class="text-sm text-muted" id="abcCValue">₹0 consumption value</div>
+            </div>
+          </div>
+
+          <div class="card mt-24">
+            <div class="card-header">
+              <div>
+                <div class="card-title">ABC classification — all parts</div>
+                <div class="card-subtitle">Ranked by all-time consumption value (qty sold × DLC)</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="abcExportBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                Export Excel
+              </button>
+            </div>
+            <div class="filter-bar">
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" class="input" id="abcSearch" placeholder="Search part number or description" />
+              </div>
+              <select class="select" id="abcFilterClass">
+                <option value="">All ABC classes</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+              </select>
+              <select class="select" id="abcFilterCategory"><option value="">All categories</option></select>
+            </div>
+            <div class="text-sm text-muted" style="margin:-8px 0 14px;line-height:1.6;" id="abcCategoryNote"></div>
+            <div class="table-wrap">
+              <table class="data-table" id="abcTable"></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CATEGORY ANALYTICS ============ -->
+      <section class="view" id="view-category">
+        <div id="categoryEmptyState"></div>
+        <div id="categoryContent" class="hidden">
+          <div class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Consumption value by category</div>
+                <div class="card-subtitle">All-time qty sold × DLC, every category compared side by side</div>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap tall"><canvas id="chartCategoryValue"></canvas></div>
+          </div>
+
+          <div class="card mt-24">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Category breakdown</div>
+                <div class="card-subtitle">Stock value, consumption value, FSN mix and unpriced parts — one row per category</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="categoryExportBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                Export Excel
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="categoryTable"></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ TREND ANALYTICS ============ -->
+      <section class="view" id="view-trends">
+        <div id="trendsEmptyState"></div>
+        <div id="trendsContent" class="hidden">
+          <div class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Monthly sales trend</div>
+                <div class="card-subtitle">Units sold and consumption value, full ledger history by month</div>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap tall"><canvas id="chartMonthlyTrend"></canvas></div>
+          </div>
+
+          <div class="grid grid-2 mt-24">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Trending up</div>
+                  <div class="card-subtitle">Last 30 days vs the 30 days before — biggest gainers</div>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table" id="trendUpTable"></table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Trending down</div>
+                  <div class="card-subtitle">Last 30 days vs the 30 days before — biggest decliners</div>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table" id="trendDownTable"></table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PART EXPLORER ============ -->
+      <section class="view" id="view-parts">
+        <div id="partsEmptyState"></div>
+        <div id="partsContent" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Part explorer</div>
+                <div class="card-subtitle">Every part — inventory, classification and full sales history in one place</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="partsExportBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                Export Excel
+              </button>
+            </div>
+            <div class="filter-bar">
+              <div class="search-input-wrap" style="max-width:420px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" class="input" id="partsSearch" placeholder="Search by part number or description" />
+              </div>
+              <select class="select" id="partsFilterCategory"><option value="">All categories</option></select>
+              <select class="select" id="partsFilterFsn">
+                <option value="">All FSN</option>
+                <option value="Fast">Fast</option>
+                <option value="Slow">Slow</option>
+                <option value="Non-moving">Non-moving</option>
+              </select>
+              <select class="select" id="partsFilterAbc">
+                <option value="">All ABC</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+              </select>
+              <select class="select" id="partsFilterStock">
+                <option value="">All stock levels</option>
+                <option value="zero">Zero stock</option>
+                <option value="low">Below 2-week cover</option>
+                <option value="unpriced">No price on file</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="partsTable"></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ LEDGER EXPLORER ============ -->
+      <section class="view" id="view-ledger">
+        <div id="ledgerEmptyState"></div>
+        <div id="ledgerContent" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Ledger explorer</div>
+                <div class="card-subtitle">Full transaction history — filter by part to see its complete movement trail</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="ledgerExportBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                Export current page
+              </button>
+            </div>
+            <div class="filter-bar">
+              <div class="search-input-wrap" style="max-width:420px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" class="input" id="ledgerSearch" placeholder="Search by part number, order or invoice number" />
+              </div>
+              <select class="select" id="ledgerFilterOrderType">
+                <option value="">All order types</option>
+              </select>
+              <select class="select" id="ledgerFilterStatus">
+                <option value="">All statuses</option>
+              </select>
+              <input type="date" class="input" id="ledgerFilterFrom" />
+              <input type="date" class="input" id="ledgerFilterTo" />
+            </div>
+            <div class="text-sm text-muted mt-8" id="ledgerRowCount" style="margin-bottom:12px;"></div>
+            <div class="table-wrap">
+              <table class="data-table" id="ledgerTable"></table>
+            </div>
+            <div class="flex items-center justify-between mt-16">
+              <button class="btn btn-secondary btn-sm" id="ledgerPrevPage">Previous</button>
+              <span class="text-sm text-muted" id="ledgerPageInfo"></span>
+              <button class="btn btn-secondary btn-sm" id="ledgerNextPage">Next</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ORDER PLANNING ============ -->
+      <section class="view" id="view-orderplanning">
+        <div id="orderEmptyState"></div>
+        <div id="orderContent" class="hidden">
+
+          <div class="setup-banner" id="orderCategoryNotice" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <div>
+              <div class="setup-banner-title">Order planning is restricted to specific categories</div>
+              <div class="setup-banner-text" id="orderCategoryNoticeText"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Monthly order budget cockpit</div>
+                <div class="card-subtitle" id="budgetCockpitSubtitle">₹7,00,000 monthly cap split across 4 Mondays — funded by FSN/ABC priority</div>
+              </div>
+              <button class="btn btn-primary btn-sm" id="generatePlanBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3-3L22 7l-3 3m-3.5-3.5L19 7"/></svg>
+                Generate this week's plan
+              </button>
+            </div>
+
+            <div class="budget-cockpit">
+              <div class="gauge-wrap">
+                <svg width="180" height="180" viewBox="0 0 180 180">
+                  <circle cx="90" cy="90" r="78" fill="none" stroke="#EEF0F4" stroke-width="14"/>
+                  <circle id="gaugeArc" cx="90" cy="90" r="78" fill="none" stroke="#F2994A" stroke-width="14"
+                    stroke-linecap="round" stroke-dasharray="490" stroke-dashoffset="490"
+                    transform="rotate(-90 90 90)"/>
+                  <text x="90" y="85" text-anchor="middle" font-size="26" font-weight="700" fill="#161B26" id="gaugeMonthPct">0%</text>
+                  <text x="90" y="106" text-anchor="middle" font-size="11" fill="#5B6478" font-weight="600">of monthly cap</text>
+                </svg>
+                <div class="gauge-label" id="gaugeMonthSpend">₹0 of ₹7,00,000 planned this month</div>
+              </div>
+
+              <div class="week-strip" id="weekStrip"></div>
+            </div>
+          </div>
+
+          <div class="card mt-24">
+            <div class="card-header">
+              <div>
+                <div class="card-title">This Monday's order — line items</div>
+                <div class="card-subtitle" id="planWeekSubtitle">Generate a plan to see suggested order lines</div>
+              </div>
+              <div class="flex gap-8">
+                <button class="btn btn-secondary btn-sm" id="exportPlanBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                  Export Excel
+                </button>
+                <button class="btn btn-primary btn-sm" id="approvePlanBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+                  Approve & save plan
+                </button>
+              </div>
+            </div>
+            <div class="filter-bar">
+              <select class="select" id="planWeekSelect">
+                <option value="0">Week 1 (Monday 1)</option>
+                <option value="1">Week 2 (Monday 2)</option>
+                <option value="2">Week 3 (Monday 3)</option>
+                <option value="3">Week 4 (Monday 4)</option>
+              </select>
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" class="input" id="planSearch" placeholder="Search part number or description" />
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="planTable"></table>
+            </div>
+          </div>
+
+          <div class="card mt-24" id="skippedNoPriceCard" style="display:none;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Skipped — no price on file</div>
+                <div class="card-subtitle">These parts qualified for ordering but have no DLC in your inventory file, so a quantity can't be costed. Add a price in your DMS to include them.</div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="skippedNoPriceTable"></table>
+            </div>
+          </div>
+
+          <div class="card mt-24">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Saved order plans — history</div>
+                <div class="card-subtitle">Every plan ever generated and approved, for audit</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="planHistoryExportBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                Export Excel
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="planHistoryTable"></table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============ AI INSIGHTS ============ -->
+      <section class="view" id="view-ai">
+        <div id="aiEmptyState"></div>
+        <div id="aiContent" class="hidden">
+          <div class="ai-panel">
+            <div class="ai-panel-header">
+              <div class="ai-panel-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+              </div>
+              <div>
+                <div class="ai-panel-title">AI inventory analysis</div>
+                <div class="ai-panel-sub">Powered by Google Gemini (free tier) — reads your live FSN/ABC summary</div>
+              </div>
+            </div>
+            <div class="ai-panel-body placeholder" id="aiPanelBody">Click "Generate insights" to get a plain-language read on your inventory health, biggest stock-out risks, and this week's ordering priorities.</div>
+            <div class="mt-16">
+              <button class="btn btn-primary btn-sm" id="generateAiBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+                Generate insights
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ UPLOAD DATA ============ -->
+      <section class="view" id="view-upload">
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Parts Ledger</div>
+                <div class="card-subtitle">Full transaction history export (.xlsx, .csv) — replaces existing ledger</div>
+              </div>
+            </div>
+            <div class="upload-zone" id="ledgerUploadZone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+              <div class="upload-zone-title">Drop ledger file here or click to browse</div>
+              <div class="upload-zone-sub">.xlsx, .csv, or tab-delimited .txt</div>
+              <input type="file" id="ledgerFileInput" accept=".xlsx,.xls,.csv,.txt,.tsv" class="hidden" />
+            </div>
+            <div id="ledgerUploadResult"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Parts Inventory</div>
+                <div class="card-subtitle">Today's stock snapshot (.txt, .csv, .xlsx) — replaces existing inventory</div>
+              </div>
+            </div>
+            <div class="upload-zone" id="inventoryUploadZone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+              <div class="upload-zone-title">Drop inventory file here or click to browse</div>
+              <div class="upload-zone-sub">.txt, .csv, or .xlsx</div>
+              <input type="file" id="inventoryFileInput" accept=".xlsx,.xls,.csv,.txt,.tsv" class="hidden" />
+            </div>
+            <div id="inventoryUploadResult"></div>
+          </div>
+        </div>
+
+        <div class="card mt-24">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Upload routine</div>
+              <div class="card-subtitle">Recommended daily habit for accurate Monday order plans</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--text-2);line-height:1.8;">
+            Every morning, export the latest Parts Ledger and Parts Inventory from your DMS and upload both here.
+            The dashboard, FSN/ABC analysis and order planning all recalculate instantly from whatever is currently
+            loaded — nothing is cached from a previous day. On Monday mornings, after uploading the latest files,
+            go to <strong>Order Planning</strong> and click <strong>Generate this week's plan</strong> to get that week's
+            suggested order, automatically capped within your monthly ₹7,00,000 budget.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section class="view" id="view-settings">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Backend connection</div>
+              <div class="card-subtitle">Google Sheets via Apps Script Web App</div>
+            </div>
+          </div>
+          <div id="settingsConnectionStatus"></div>
+          <div class="text-sm text-muted mt-16" style="line-height:1.8;">
+            The Google Apps Script URL and Gemini API key are configured in <code>js/config.js</code> in this
+            project's source code — edit that file and redeploy on GitHub Pages (or wherever you host this) to
+            change them. See <code>google-apps-script/Code.gs</code> for full backend setup instructions.
+          </div>
+        </div>
+
+        <div class="card mt-24">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Business rules</div>
+              <div class="card-subtitle">Current values from js/config.js</div>
+            </div>
+          </div>
+          <div class="grid grid-3" id="settingsRulesGrid"></div>
+        </div>
+
+        <div class="card mt-24">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Danger zone</div>
+              <div class="card-subtitle">Clear data from the connected Google Sheet</div>
+            </div>
+          </div>
+          <div class="flex gap-12">
+            <button class="btn btn-danger btn-sm" id="clearLedgerBtn">Clear ledger data</button>
+            <button class="btn btn-danger btn-sm" id="clearInventoryBtn">Clear inventory data</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="spinner" style="width:28px;height:28px;border-width:3px;"></div>
+  <div class="loading-overlay-text" id="loadingOverlayText">Loading…</div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/api.js"></script>
+<script src="js/fileparser.js"></script>
+<script src="js/ai-insights.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
